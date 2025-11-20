@@ -1,48 +1,53 @@
 """
-Database Schemas
+Database Schemas for Personal Finance Dashboard
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model represents a collection in your MongoDB database.
+Collection name = lowercase of the class name.
 """
-
+from __future__ import annotations
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Literal, List
+from datetime import datetime
 
-# Example schemas (replace with your own):
+Currency = float  # simple alias for readability
 
-class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+class Account(BaseModel):
+    name: str = Field(..., description="Account name, e.g., Checking, Savings, Cash, Credit Card")
+    type: Literal["checking", "savings", "cash", "credit", "investment"] = Field(
+        ..., description="Account type"
+    )
+    starting_balance: Currency = Field(0.0, description="Starting balance for the account")
+    icon: Optional[str] = Field(None, description="Optional icon name for UI")
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+class Transaction(BaseModel):
+    amount: Currency = Field(..., gt=0, description="Positive amount for the transaction")
+    description: Optional[str] = Field(None, description="Short description or memo")
+    category: str = Field(..., description="Category label, e.g., Salary, Food, Rent")
+    kind: Literal["income", "expense", "savings", "debt"] = Field(
+        ..., description="Type of movement"
+    )
+    account_id: Optional[str] = Field(None, description="Associated account id (string)")
+    date: datetime = Field(..., description="Date and time of the transaction")
+    recurring: Optional[bool] = Field(False, description="Whether this is generated from a recurring rule")
 
-# Add your own schemas here:
-# --------------------------------------------------
+class Goal(BaseModel):
+    name: str
+    target_amount: Currency = Field(..., gt=0)
+    current_amount: Currency = Field(0.0, ge=0)
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class Debt(BaseModel):
+    name: str
+    balance: Currency = Field(..., ge=0)
+    interest_rate: float = Field(0.0, ge=0, description="APR as a percentage, e.g., 19.99")
+    minimum_payment: Currency = Field(0.0, ge=0)
+
+class BudgetCategory(BaseModel):
+    name: str
+    monthly_budget: Currency = Field(0.0, ge=0)
+
+class Notification(BaseModel):
+    kind: Literal["bill", "budget", "goal"]
+    message: str
+    date: datetime = Field(default_factory=datetime.utcnow)
+
+# The examples from the template are intentionally omitted to keep the schema focused
